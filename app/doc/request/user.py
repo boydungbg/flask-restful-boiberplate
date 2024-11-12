@@ -6,13 +6,16 @@ def add_user_request_doc(api: Namespace):
         {
             "email": fields.String(required=True, description="This is your email."),
             "username": fields.String(
-                required=True, description="This is your username"
+                required=True, description="This is your username."
             ),
             "password": fields.String(
-                required=True, description="This is your password"
+                required=True, description="This is your password."
+            ),
+            "password_confirm": fields.String(
+                required=True, description="This is your password confirmation."
             ),
             "full_name": fields.String(
-                required=True, description="This is your full name"
+                required=True, description="This is your full name."
             ),
         },
     )

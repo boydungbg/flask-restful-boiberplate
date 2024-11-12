@@ -14,4 +14,4 @@ def add_user_response_err_doc(
     message="Something wrong!",
     errors=[],
 ):
-    return {}
+    return errors
