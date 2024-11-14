@@ -1,19 +1,36 @@
 import jwt
 import datetime
 from typing import Union
-from database import db
+from dataclasses import dataclass, field
+from datetime import datetime
 from extensions.bcrypt import flask_bcrypt
-from config.app import AppConfig 
+from config.app import AppConfig
+from database import db
 
 
+@dataclass
 class User(db.Model):
     __tablename__ = "users"  # Table name in the database
 
+    id: int = field(init=False)
+    username: str
+    full_name: str
+    email: str
+    password_hash: str
+    created_at: datetime = field(init=False)
+    updated_at: datetime = field(init=False)
+
     id = db.Column(db.Integer, primary_key=True)  # Primary key column
-    username = db.Column(db.String(100), nullable=False)  # Name column
-    full_name = db.Column(db.String(255), nullable=False)  # Name column
+    username = db.Column(db.String(60), unique=True, nullable=False)  # Name column
+    full_name = db.Column(db.String(60), nullable=False)  # Name column
     email = db.Column(db.String(100), unique=True, nullable=False)  # Email column
     password_hash = db.Column(db.String(255), nullable=False)  # Password column
+
+    # Timestamp fields
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     @property
     def password(self):
