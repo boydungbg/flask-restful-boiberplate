@@ -10,32 +10,38 @@ class GetListUserRequest(Schema):
         error_messages={
             "invalid": "Search must be a string",
         },
-        default="",
+        missing="",
         required=False,
     )
     page = fields.Integer(
         error_messages={
             "invalid": "Page must be a number",
         },
-        default=1,
+        missing=1,
     )
     per_page = fields.Integer(
         error_messages={
             "invalid": "Per_page must be a number",
         },
-        default=20,
+        missing=20,
+    )
+    status = fields.Integer(
+        error_messages={
+            "invalid": "status 0, 1",
+        },
+        required=False,
     )
     sort_by = fields.String(
-        validate=validate.OneOf(["id", "full_name", "username", "email", 'created_at']),
+        validate=validate.OneOf(["id", "full_name", "username", "email", "created_at"]),
         description="User sort by: can be 'id', 'full_name', 'username', 'email', 'created_at'",
         required=False,
-        default='created_at'
+        missing="created_at",
     )
     sort_type = fields.String(
         validate=validate.OneOf(["asc", "desc"]),
         description="User sort type asc or desc",
         required=False,
-        default='desc'
+        missing="desc",
     )
     created_at_min = fields.DateTime(
         format="%Y-%m-%d %H:%M:%S",
@@ -52,10 +58,13 @@ class GetListUserRequest(Schema):
     def validate_date_order(self, data: dict, **kwargs):
         start_date: datetime = data.get("created_at_min")
         end_date: datetime = data.get("created_at_max")
-        if start_date and end_date and start_date > end_date:
+        if start_date == None and end_date == None:
+            return data
+        if start_date and end_date and start_date > end_date or start_date == end_date:
             raise ValidationError(
                 "created_at_min must be before created_at_max.", "created_at_min"
             )
+        return data
 
 
 def validate_request_get_list_user(func):
@@ -64,8 +73,8 @@ def validate_request_get_list_user(func):
     def decorate(*args, **kwargs):
         try:
             # Load and validate data
-            valid_data = schema.dump(request.args)
-            kwargs['valid_data'] = valid_data  # Pass to the view function
+            valid_data = schema.load(request.args)
+            kwargs["valid_data"] = valid_data  # Pass to the view function
             return func(*args, **kwargs)
         except ValidationError as err:
             first_messages = {

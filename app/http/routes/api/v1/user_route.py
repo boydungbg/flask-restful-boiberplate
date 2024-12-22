@@ -1,6 +1,7 @@
-from flask import request
 from flask_restx import Resource, Namespace
-from app.http.resources.get_list_user_resouce import format_list_user_response
+
+from app.http.middleware.auth_middleware import auth
+from app.http.resources.user.get_list_user_resouce import format_list_user_response
 from storage.doc.request.user_api_document import (
     add_user_request_doc,
     get_list_user_request_doc,
@@ -8,25 +9,29 @@ from storage.doc.request.user_api_document import (
 from storage.doc.response.user_api_response import (
     add_user_response_doc,
     add_user_response_err_doc,
+    get_list_user_response_doc,
 )
 from app.helper.response import response_success, response_error
 from app.http.requests.user.add_user_request import validate_add_user
 from app.http.requests.user.get_list_user_request import validate_request_get_list_user
 from app.services.user_service import add_user, get_list_user
 
-api = Namespace("users", description="Api users")
+user_ns = Namespace(
+    "users",
+    description="Api users",
+)
 
 
-@api.route("/")
-class UserController(Resource):
+@user_ns.route("/")
+class UserRoute(Resource):
     # Start api doc create user
-    @api.expect(add_user_request_doc(api))
-    @api.response(200, "Add user successfully!", model=add_user_response_doc(api))
-    @api.response(
+    @user_ns.expect(add_user_request_doc(user_ns))
+    @user_ns.response(200, "Add user successfully!", add_user_response_doc(user_ns))
+    @user_ns.response(
         400,
         "Response validate add user input",
-        model=add_user_response_err_doc(
-            api=api,
+        add_user_response_err_doc(
+            ns=user_ns,
             code=400,
             message="Password confirmation need to same password field.",
             errors={
@@ -34,22 +39,24 @@ class UserController(Resource):
             },
         ),
     )
-    @api.doc("Create a new user")
     # End api doc create user
+    @auth
     @validate_add_user
-    def post(seft, valid_data):
+    def post(self, valid_data):
         success = add_user(valid_data)
         if success:
             return response_success(data={})
         return response_error(message="Add user failed!")
 
     # Start api doc get list user
-    @api.expect(get_list_user_request_doc())
-    @api.response(200, "Get list user successfully!", model=add_user_response_doc(api))
-    @api.doc("Get list user successfully!")
+    @user_ns.expect(get_list_user_request_doc())
+    @user_ns.response(
+        200, "Get list user successfully!", model=get_list_user_response_doc(user_ns)
+    )
     # End api doc get list user
+    @auth
     @validate_request_get_list_user
-    def get(seft, valid_data):
+    def get(self, valid_data):
         result = get_list_user(valid_data)
         if result["status"] == True:
             return response_success(

@@ -1,8 +1,10 @@
-from sqlalchemy import or_, and_, desc, asc
+from sqlalchemy import or_, desc, asc
 import math
+from datetime import datetime
+from flask import current_app
+from app.helper.datatime import parser_datetime
 from app.models.user import User
-from app.services import save_change
-from database import db
+from app.services.base_service import save_change
 from typing import List, Dict
 
 
@@ -17,8 +19,17 @@ def add_user(data: dict) -> bool:
         save_change(user)
         return True
     except Exception as ex:
-        print(ex)
+        current_app.logger.error(ex)
         return False
+
+
+def get_user_by_id(id: int) -> User:
+    try:
+        user = User.query.where(User.id == id).first()
+        return user
+    except Exception as ex:
+        current_app.logger.error(ex)
+        return None
 
 
 def get_list_user(data: dict) -> Dict:
@@ -33,6 +44,10 @@ def get_list_user(data: dict) -> Dict:
         query = User.query
         if len(search) != 0:
             query = query.filter(_add_query_search(search))
+        if data.get("status") != None:
+            query = query.filter(User.status == int(data.get("status")))
+        if data.get("created_at_min") != None and data.get("created_at_min") != None:
+            query = query.filter(_add_query_datetime(data))
         query = query.order_by(_add_sort_by(sort_by, sort_type))
         query = query.offset(offset=offset).limit(limit=per_page)
         users = query.all()
@@ -46,40 +61,51 @@ def get_list_user(data: dict) -> Dict:
         }
         return {"status": True, "data": users, "meta_data": meta_data}
     except Exception as ex:
-        print(ex)
+        current_app.logger.error(ex)
         return {"status": False, data: []}
-    
+
+
 def is_email_exist(email: str) -> bool:
     try:
-        count = User.query.filter_by(email = email).count()
+        count = User.query.filter_by(email=email).count()
         return count > 0
     except Exception as ex:
-        print(ex)
-        return False
-    
-def is_username_exist(username: str) -> bool:
-    try:
-        count = User.query.filter_by(username = username).count()
-        return count > 0
-    except Exception as ex:
-        print(ex)
+        current_app.logger.error(ex)
         return False
 
-def _count_all_user(data) -> int:
+
+def is_username_exist(username: str) -> bool:
+    try:
+        count = User.query.filter_by(username=username).count()
+        return count > 0
+    except Exception as ex:
+        current_app.logger.error(ex)
+        return False
+
+
+def _count_all_user(data: dict) -> int:
     search = data.get("search")
     query = User.query
     if len(search) != 0:
         query = query.filter(_add_query_search(search))
+    if data.get("created_at_min") != None and data.get("created_at_min") != None:
+        query = query.filter(_add_query_datetime(data))
+    if data.get("status") != None:
+        query = query.filter(User.status == int(data.get("status")))
     return query.count()
 
 
 def _add_query_search(search: str):
     return or_(
         User.id == search,
-        User.full_name.like(f"{search}%"),
-        User.username.like(f"{search}%"),
+        User.full_name.like(f"%{search}%"),
+        User.username == search,
         User.email == search,
     )
+
+
+def _add_query_datetime(data: dict) -> int:
+    return User.created_at.between(data["created_at_min"], data["created_at_max"])
 
 
 def _add_sort_by(sort_by: str, sort_type: str):
